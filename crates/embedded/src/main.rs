@@ -35,14 +35,8 @@ fn main() {
     log::info!("initialising display...");
     let mut display = Display::new();
 
-    // Solid-colour test: fill screen with pure white to verify pixels reach the display.
-    // 0xFFFF = white in any byte order (symmetric value).
-    // If the screen shows white -> display pipeline works.
-    // If it shows garbage/lines -> SPI or init still broken.
-    log::info!("display test: running color cycle — watch screen for WHITE/RED/GREEN/BLUE");
-    display.test_color_cycle();
-
-    std::thread::sleep(std::time::Duration::from_millis(1000));
+    display.fill_solid(0xFFFF); // white flash to confirm display is alive
+    std::thread::sleep(std::time::Duration::from_millis(300));
 
     log::info!("initialising touch...");
     let mut touch = TouchDriver::new();

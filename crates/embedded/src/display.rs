@@ -270,7 +270,8 @@ impl Display {
                         trans.base.flags = (SPI_TRANS_MODE_QIO
                             | SPI_TRANS_VARIABLE_CMD
                             | SPI_TRANS_VARIABLE_ADDR
-                            | SPI_TRANS_VARIABLE_DUMMY) as u32;
+                            | SPI_TRANS_VARIABLE_DUMMY)
+                            as u32;
                         trans.command_bits = 0;
                         trans.address_bits = 0;
                         trans.dummy_bits = 0;

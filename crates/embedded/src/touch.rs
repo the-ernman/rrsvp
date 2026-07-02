@@ -76,21 +76,15 @@ impl TouchDriver {
             return None;
         }
 
-        // AXS15231B: long-axis = portrait Y (0..PANEL_H), short-axis = portrait X (0..PANEL_W).
+        // AXS15231B: long-axis (raw_long) = portrait Y (0..640), short-axis (raw_short) = portrait X (0..172).
         let raw_long = (((data[2] & 0x0F) as u16) << 8) | data[3] as u16;
         let raw_short = (((data[4] & 0x0F) as u16) << 8) | data[5] as u16;
 
-        let phys_x = raw_short.min(TOUCH_PANEL_W.saturating_sub(1));
-        let phys_y = if raw_long >= TOUCH_PANEL_H {
-            0
-        } else {
-            TOUCH_PANEL_H - 1 - raw_long
-        };
-
-        // Map portrait physical coordinates to landscape software coordinates.
-        // MADCTL=0xE0 (MY+MX+MV): landscape, compensated for 180-degree physical rotation.
-        let lx = (TOUCH_PANEL_H - 1).saturating_sub(phys_y);
-        let ly = phys_x;
+        // Map to landscape screen coordinates: (0,0) = top-left, x increases right, y increases down.
+        // Physical panel has kPanelMemoryRotated180=true, so raw (0,0) is at physical bottom-right.
+        // Flip both axes to correct orientation.
+        let lx = (TOUCH_PANEL_H - 1).saturating_sub(raw_long.min(TOUCH_PANEL_H - 1));
+        let ly = (TOUCH_PANEL_W - 1).saturating_sub(raw_short.min(TOUCH_PANEL_W - 1));
 
         Some(TPoint { x: lx, y: ly })
     }
