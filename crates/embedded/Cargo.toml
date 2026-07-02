@@ -1,0 +1,34 @@
+[package]
+name = "rrsvp-embedded"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "rrsvp-embedded"
+path = "src/main.rs"
+test = false
+bench = false
+
+[lib]
+name = "rrsvp_embedded_lib"
+path = "src/lib.rs"
+test = false
+bench = false
+
+[profile.release]
+opt-level = "s"
+
+[features]
+default = ["std", "native", "esp-idf-svc/native"]
+std = ["esp-idf-svc/std"]
+native = []
+
+[dependencies]
+rrsvp-core = { path = "../core" }
+esp-idf-svc = { version = "=0.52.1", features = ["std", "native"] }
+embedded-graphics = "0.8"
+heapless = "0.8"
+log = { version = "0.4", features = ["max_level_debug", "release_max_level_info"] }
+
+[build-dependencies]
+embuild = { version = "0.33", features = ["espidf"] }

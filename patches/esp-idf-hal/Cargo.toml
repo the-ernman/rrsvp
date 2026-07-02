@@ -1,0 +1,18 @@
+[package]
+name = "esp-idf-hal"
+version = "0.46.2"
+edition = "2021"
+description = "Local patch for esp-idf-hal 0.46.2 — fixes bindgen 0.71 struct naming regression (rmt_receive_config_t_extra_rmt_receive_flags -> rmt_receive_config_t_extra_flags)"
+license = "MIT OR Apache-2.0"
+
+[features]
+default = []
+std = []
+native = []
+alloc = []
+pio = []
+embassy-sync = []
+critical-section = []
+edge-executor = []
+
+[dependencies]

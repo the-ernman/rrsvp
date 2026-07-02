@@ -1,0 +1,4 @@
+# Workspace-level Cargo configuration.
+# Target-specific overrides live in crates/embedded/.cargo/config.toml.
+# This file intentionally left minimal to avoid interfering with the
+# ESP32 cross-compilation settings when building the desktop crate.

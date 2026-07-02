@@ -1,0 +1,25 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/core",
+    "crates/embedded",
+    "crates/desktop",
+]
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+
+# Embedded release profile — size-optimised
+[profile.embedded-release]
+inherits = "release"
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = false
+
+[patch.crates-io]
+# Patch for bindgen 0.71 naming change: rmt_receive_config_t_extra_rmt_receive_flags -> rmt_receive_config_t_extra_flags
+esp-idf-hal = { path = "patches/esp-idf-hal" }
