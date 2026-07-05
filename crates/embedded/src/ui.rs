@@ -65,36 +65,64 @@ impl OrpColor {
     }
 }
 
-// ── Font size ─────────────────────────────────────────────────────────────────
+// ── Font size — issue #6: added XLarge ────────────────────────────────────────
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum FontSize {
-    Small,
-    Medium,
-    Large,
+    Small, Medium, Large, XLarge,
 }
 
 impl FontSize {
     fn char_w(self) -> i32 {
         match self {
-            FontSize::Small  => 6,
-            FontSize::Medium => 9,
-            FontSize::Large  => 10,
+            FontSize::Small   => 6,
+            FontSize::Medium  => 9,
+            FontSize::Large   => 10,
+            FontSize::XLarge  => 13,
         }
     }
     fn line_h(self) -> i32 {
         match self {
-            FontSize::Small  => 12,
-            FontSize::Medium => 17,
-            FontSize::Large  => 22,
+            FontSize::Small   => 12,
+            FontSize::Medium  => 17,
+            FontSize::Large   => 22,
+            FontSize::XLarge  => 26,
         }
     }
     fn baseline(self) -> i32 {
         match self {
-            FontSize::Small  => 9,
-            FontSize::Medium => 13,
-            FontSize::Large  => 17,
+            FontSize::Small   => 9,
+            FontSize::Medium  => 13,
+            FontSize::Large   => 17,
+            FontSize::XLarge  => 20,
         }
     }
+    fn rsvp_y_offset(self) -> i32 {
+        match self {
+            FontSize::Small   => 4,
+            FontSize::Medium  => 6,
+            FontSize::Large   => 7,
+            FontSize::XLarge  => 7,
+        }
+    }
+
+    /// Pixel height of the glyph (used to compute the word vertical extent).
+    fn font_height(self) -> i32 {
+        match self {
+            FontSize::Small   => 10,
+            FontSize::Medium  => 15,
+            FontSize::Large   => 20,
+            FontSize::XLarge  => 22, // FONT_10X20 + 2px bold-offset
+        }
+    }
+}
+
+// ── Focus mode — issue #1: 4 modes replacing the bool ────────────────────────
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum FocusMode {
+    None,
+    BarsOnly,
+    BarsAndLine,
+    LineOnly,
 }
 
 // ── Reading mode ──────────────────────────────────────────────────────────────
@@ -109,7 +137,7 @@ pub struct Settings {
     pub dark_mode:       bool,
     pub orp_color:       OrpColor,
     pub font_size:       FontSize,
-    pub focus_bars:      bool,
+    pub focus_mode:      FocusMode,
     pub focus_bar_color: OrpColor,
     pub phantom_words:   bool,
 }
@@ -120,7 +148,7 @@ impl Default for Settings {
             dark_mode:       true,
             orp_color:       OrpColor::Red,
             font_size:       FontSize::Large,
-            focus_bars:      false,
+            focus_mode:      FocusMode::None,
             focus_bar_color: OrpColor::White,
             phantom_words:   false,
         }
@@ -170,13 +198,14 @@ impl UiState {
         }
     }
 
+    // issue #4: SETTINGS on left, BOOKS middle, RESUME right
     fn touch_menu(&mut self, pt: crate::touch::TPoint) {
         if pt.x < (W / 3) as u16 {
-            self.screen = Screen::Reader;
+            self.screen = Screen::Settings;
         } else if pt.x < (2 * W / 3) as u16 {
             self.screen = Screen::Books;
         } else {
-            self.screen = Screen::Settings;
+            self.screen = Screen::Reader;
         }
     }
 
@@ -190,41 +219,50 @@ impl UiState {
         let y = pt.y as i32;
         let x = pt.x as i32;
         if y < 24 { self.screen = Screen::MainMenu; return; }
-        let lw = 160i32;
+        let lw    = 160i32;
+        let avail = W - lw;
         if y < 48 {
-            let half = lw + (W - lw) / 2;
+            let half = lw + avail / 2;
             self.settings.dark_mode = x >= half;
         } else if y < 72 {
             if x >= lw {
-                let avail = W - lw;
-                let idx = ((x - lw) * ORP_ALL.len() as i32 / avail) as usize;
-                if idx < ORP_ALL.len() { self.settings.orp_color = ORP_ALL[idx]; }
+                let idx = ((x - lw) * ORP_ALL.len() as i32 / avail).min(ORP_ALL.len() as i32 - 1) as usize;
+                self.settings.orp_color = ORP_ALL[idx];
             }
         } else if y < 96 {
+            // Font size: 4 buttons
             if x >= lw {
-                let avail = W - lw;
-                let idx = (x - lw) * 3 / avail;
+                let idx = (x - lw) * 4 / avail;
                 self.settings.font_size = match idx {
                     0 => FontSize::Small,
                     1 => FontSize::Medium,
-                    _ => FontSize::Large,
+                    2 => FontSize::Large,
+                    _ => FontSize::XLarge,
                 };
             }
         } else if y < 120 {
-            let half = lw + (W - lw) / 2;
-            self.settings.focus_bars = x >= half;
+            // Focus mode: 4 buttons
+            if x >= lw {
+                let idx = (x - lw) * 4 / avail;
+                self.settings.focus_mode = match idx {
+                    0 => FocusMode::None,
+                    1 => FocusMode::BarsOnly,
+                    2 => FocusMode::BarsAndLine,
+                    _ => FocusMode::LineOnly,
+                };
+            }
         } else if y < 144 {
             if x >= lw {
-                let avail = W - lw;
-                let idx = ((x - lw) * ORP_ALL.len() as i32 / avail) as usize;
-                if idx < ORP_ALL.len() { self.settings.focus_bar_color = ORP_ALL[idx]; }
+                let idx = ((x - lw) * ORP_ALL.len() as i32 / avail).min(ORP_ALL.len() as i32 - 1) as usize;
+                self.settings.focus_bar_color = ORP_ALL[idx];
             }
         } else {
-            let half = lw + (W - lw) / 2;
+            let half = lw + avail / 2;
             self.settings.phantom_words = x >= half;
         }
     }
 
+    // issue #5: scroll mode never plays RSVP
     fn touch_reader(&mut self, pt: crate::touch::TPoint, now_ms: u32) {
         if pt.y < HDR as u16 {
             if pt.x < (W / 4) as u16 {
@@ -235,23 +273,37 @@ impl UiState {
                     ReadingMode::Rsvp   => ReadingMode::Scroll,
                     ReadingMode::Scroll => ReadingMode::Rsvp,
                 };
+                if self.reading_mode == ReadingMode::Scroll {
+                    self.playing = false;
+                }
             } else {
-                self.playing = !self.playing;
-                if self.playing { self.reader.start(now_ms); }
+                // Play/pause only in RSVP mode
+                if self.reading_mode == ReadingMode::Rsvp {
+                    self.playing = !self.playing;
+                    if self.playing { self.reader.start(now_ms); }
+                }
             }
             return;
         }
         if pt.y > (H - FTR) as u16 {
-            if pt.x > (W / 2) as u16 {
-                self.reader.adjust_wpm(1);
-            } else {
-                self.reader.adjust_wpm(-1);
+            match self.reading_mode {
+                ReadingMode::Rsvp => {
+                    if pt.x > (W / 2) as u16 { self.reader.adjust_wpm(1); }
+                    else                       { self.reader.adjust_wpm(-1); }
+                    self.wpm_overlay_ms = now_ms + 1500;
+                }
+                ReadingMode::Scroll => {
+                    if pt.x > (W / 2) as u16 { self.reader.scrub(10); }
+                    else                       { self.reader.scrub(-10); }
+                }
             }
-            self.wpm_overlay_ms = now_ms + 1500;
             return;
         }
         if pt.x < (W / 3) as u16 {
-            self.reader.rewind_sentence();
+            match self.reading_mode {
+                ReadingMode::Scroll => self.reader.scrub(-1),
+                ReadingMode::Rsvp   => self.reader.rewind_sentence(),
+            }
         } else if pt.x > (2 * W / 3) as u16 {
             self.reader.scrub(1);
         }
@@ -299,7 +351,12 @@ fn draw_menu(display: &mut Display, state: &UiState) {
     let btn_top = 66i32;
     let btn_h   = H - btn_top;
     let btn_w   = W / 3;
-    let buttons = [("< RESUME", "Start reading"), ("BOOKS", "Browse library"), ("SETTINGS >", "Preferences")];
+    // issue #4: Settings left, Books middle, Resume right
+    let buttons = [
+        ("SETTINGS", "Preferences"),
+        ("BOOKS",    "Browse library"),
+        ("RESUME >", "Start reading"),
+    ];
     for (i, (title, sub)) in buttons.iter().enumerate() {
         let bx = i as i32 * btn_w;
         fill(display, bx + 2, btn_top, btn_w - 4, btn_h, panel_bg(dark));
@@ -329,12 +386,12 @@ fn draw_settings(display: &mut Display, state: &UiState) {
     let s    = &state.settings;
     fill(display, 0, 0, W, H, bg(dark));
     draw_header_bar(display, dark, "< BACK", "SETTINGS");
-    settings_toggle(display, dark, 24,  "Dark Mode",   s.dark_mode);
-    settings_colors(display, dark, 48,  "ORP Colour",  s.orp_color);
-    settings_fonts( display, dark, 72,  "Font Size",   s.font_size);
-    settings_toggle(display, dark, 96,  "Focus Bars",  s.focus_bars);
-    settings_colors(display, dark, 120, "Bar Colour",  s.focus_bar_color);
-    settings_toggle(display, dark, 144, "Phantom Wds", s.phantom_words);
+    settings_toggle(   display, dark,  24, "Dark Mode",   s.dark_mode);
+    settings_colors(   display, dark,  48, "ORP Colour",  s.orp_color);
+    settings_fonts(    display, dark,  72, "Font Size",   s.font_size);
+    settings_focus(    display, dark,  96, "Focus",       s.focus_mode);
+    settings_colors(   display, dark, 120, "Bar Colour",  s.focus_bar_color);
+    settings_toggle(   display, dark, 144, "Phantom Wds", s.phantom_words);
 }
 
 fn draw_header_bar(display: &mut Display, dark: bool, back: &str, title: &str) {
@@ -381,19 +438,49 @@ fn settings_colors(display: &mut Display, dark: bool, y: i32, label: &str, sel: 
     }
 }
 
+/// issue #6: 4 buttons S / M / L / XL
 fn settings_fonts(display: &mut Display, dark: bool, y: i32, label: &str, sel: FontSize) {
     fill(display, 0, y, W, 1, dim_color(dark));
     Text::new(label, Point::new(6, y + 17), MonoTextStyle::new(&FONT_6X10, fg_color(dark))).draw(display).ok();
     let lw    = 160i32;
     let avail = W - lw;
-    let bw    = avail / 3;
-    let sizes = [(FontSize::Small, "S  sm"), (FontSize::Medium, "M  med"), (FontSize::Large, "L  lg")];
+    let bw    = avail / 4;
+    let sizes = [
+        (FontSize::Small,  "S"),
+        (FontSize::Medium, "M"),
+        (FontSize::Large,  "L"),
+        (FontSize::XLarge, "XL"),
+    ];
     for (i, (sz, lbl)) in sizes.iter().enumerate() {
         let bx     = lw + i as i32 * bw;
         let is_sel = *sz == sel;
         let btn_bg = if is_sel { fg_color(dark) } else { panel_bg(dark) };
-        let txt_fg = if is_sel { bg(dark) }        else { fg_color(dark) };
+        let txt_fg = if is_sel { bg(dark)        } else { fg_color(dark) };
         fill(display, bx + 2, y + 2, bw - 4, 20, btn_bg);
+        Text::with_alignment(lbl, Point::new(bx + bw / 2, y + 15),
+            MonoTextStyle::new(&FONT_6X10, txt_fg), Alignment::Center).draw(display).ok();
+    }
+}
+
+/// issue #1: 4-mode focus picker: OFF / BARS / BARS+ / LINE
+fn settings_focus(display: &mut Display, dark: bool, y: i32, label: &str, sel: FocusMode) {
+    fill(display, 0, y, W, 1, dim_color(dark));
+    Text::new(label, Point::new(6, y + 17), MonoTextStyle::new(&FONT_6X10, fg_color(dark))).draw(display).ok();
+    let lw    = 160i32;
+    let avail = W - lw;
+    let bw    = avail / 4;
+    let modes = [
+        (FocusMode::None,        "OFF"),
+        (FocusMode::BarsOnly,    "BARS"),
+        (FocusMode::BarsAndLine, "BARS+"),
+        (FocusMode::LineOnly,    "LINE"),
+    ];
+    for (i, (mode, lbl)) in modes.iter().enumerate() {
+        let bx     = lw + i as i32 * bw;
+        let is_sel = *mode == sel;
+        let btn_bg = if is_sel { fg_color(dark) } else { panel_bg(dark) };
+        let txt_fg = if is_sel { bg(dark)        } else { fg_color(dark) };
+        fill(display, bx + 1, y + 2, bw - 2, 20, btn_bg);
         Text::with_alignment(lbl, Point::new(bx + bw / 2, y + 15),
             MonoTextStyle::new(&FONT_6X10, txt_fg), Alignment::Center).draw(display).ok();
     }
@@ -434,7 +521,7 @@ fn reader_header(display: &mut Display, state: &UiState) {
         MonoTextStyle::new(&FONT_6X10, dim_color(dark)), Alignment::Right).draw(display).ok();
 }
 
-// ── RSVP word view ────────────────────────────────────────────────────────────
+// ── RSVP word view — issue #1 focus redesign, issue #6 XLarge ────────────────
 fn reader_rsvp_word(display: &mut Display, state: &UiState) {
     let dark = state.settings.dark_mode;
     let s    = &state.settings;
@@ -443,29 +530,32 @@ fn reader_rsvp_word(display: &mut Display, state: &UiState) {
 
     let word_area_h = H - HDR - FTR;
     let center_y    = HDR + word_area_h / 2;
-
-    let char_w  = s.font_size.char_w();
-    let orp_idx = orp_index(word);
+    let char_w      = s.font_size.char_w();
+    let orp_idx     = orp_index(word);
 
     let orp_x   = W / 2 - char_w / 2;
     let start_x = orp_x - orp_idx as i32 * char_w;
 
-    if s.focus_bars {
-        let total_w     = word.len() as i32 * char_w;
-        let gap_half    = total_w / 2 + 12;
-        let left_end    = W / 2 - gap_half;
-        let right_start = W / 2 + gap_half;
-
-        let bar_top = HDR + 3;
-        let bc = s.focus_bar_color.rgb();
-        fill(display, 0,           bar_top, left_end.max(0),          2, bc);
-        fill(display, right_start, bar_top, (W - right_start).max(0), 2, bc);
-
-        let bar_bot = H - FTR - 5;
-        fill(display, 0,           bar_bot, left_end.max(0),          2, bc);
-        fill(display, right_start, bar_bot, (W - right_start).max(0), 2, bc);
-
-        fill(display, W / 2, bar_top, 1, bar_bot - bar_top + 2, dim_color(dark));
+    // issue #1: Fixed-width focus bars — full horizontal lines, no word-length gap
+    let bar_top = HDR + 3;
+    let bar_bot = H - FTR - 5;
+    match s.focus_mode {
+        FocusMode::None => {}
+        FocusMode::BarsOnly => {
+            let bc = s.focus_bar_color.rgb();
+            fill(display, 0, bar_top, W, 2, bc);
+            fill(display, 0, bar_bot, W, 2, bc);
+        }
+        FocusMode::BarsAndLine => {
+            let bc = s.focus_bar_color.rgb();
+            fill(display, 0, bar_top, W, 2, bc);
+            fill(display, 0, bar_bot, W, 2, bc);
+            draw_focus_line(display, bc, bar_top, bar_bot, center_y, s.font_size);
+        }
+        FocusMode::LineOnly => {
+            let bc = s.focus_bar_color.rgb();
+            draw_focus_line(display, bc, bar_top, bar_bot, center_y, s.font_size);
+        }
     }
 
     if s.phantom_words {
@@ -483,19 +573,29 @@ fn reader_rsvp_word(display: &mut Display, state: &UiState) {
     }
 
     let orp_col = s.orp_color.rgb();
+    let y_off   = s.font_size.rsvp_y_offset();
     for (i, ch) in word.chars().enumerate() {
         let x = start_x + i as i32 * char_w;
         if x + char_w < 0 || x >= W { continue; }
         let col = if i == orp_idx { orp_col } else { fg_color(dark) };
-        let cs  = ch.to_string();
-        match s.font_size {
-            FontSize::Small  => Text::new(&cs, Point::new(x, center_y + 4),
-                MonoTextStyle::new(&FONT_6X10,  col)).draw(display).ok(),
-            FontSize::Medium => Text::new(&cs, Point::new(x, center_y + 6),
-                MonoTextStyle::new(&FONT_9X15,  col)).draw(display).ok(),
-            FontSize::Large  => Text::new(&cs, Point::new(x, center_y + 7),
-                MonoTextStyle::new(&FONT_10X20, col)).draw(display).ok(),
-        };
+        draw_word_char(display, &ch.to_string(), x, center_y + y_off, s.font_size, col);
+    }
+}
+
+/// issue #6: XLarge uses 2×2 bold-offset rendering of FONT_10X20
+fn draw_word_char(display: &mut Display, ch: &str, x: i32, y: i32, size: FontSize, color: Rgb565) {
+    match size {
+        FontSize::Small  => { Text::new(ch, Point::new(x, y), MonoTextStyle::new(&FONT_6X10,  color)).draw(display).ok(); }
+        FontSize::Medium => { Text::new(ch, Point::new(x, y), MonoTextStyle::new(&FONT_9X15,  color)).draw(display).ok(); }
+        FontSize::Large  => { Text::new(ch, Point::new(x, y), MonoTextStyle::new(&FONT_10X20, color)).draw(display).ok(); }
+        FontSize::XLarge => {
+            for dx in 0i32..=1 {
+                for dy in 0i32..=1 {
+                    Text::new(ch, Point::new(x + dx, y + dy),
+                        MonoTextStyle::new(&FONT_10X20, color)).draw(display).ok();
+                }
+            }
+        }
     }
 }
 
@@ -562,29 +662,27 @@ fn reader_scroll_view(display: &mut Display, state: &UiState) {
             let word = state.reader.word_at(word_i);
             let col  = if word_i == cur { s.orp_color.rgb() } else { fg_color(dark) };
             if x > 0 { x += char_w; }
-            let cs = word.clone();
-            match s.font_size {
-                FontSize::Small  => Text::new(&cs, Point::new(x, y + baseline),
-                    MonoTextStyle::new(&FONT_6X10,  col)).draw(display).ok(),
-                FontSize::Medium => Text::new(&cs, Point::new(x, y + baseline),
-                    MonoTextStyle::new(&FONT_9X15,  col)).draw(display).ok(),
-                FontSize::Large  => Text::new(&cs, Point::new(x, y + baseline),
-                    MonoTextStyle::new(&FONT_10X20, col)).draw(display).ok(),
-            };
+            draw_word_char(display, &word, x, y + baseline, s.font_size, col);
             x += word.len() as i32 * char_w;
             if x >= W { break; }
         }
     }
 }
 
+// ── Reader footer — issue #5: scroll mode shows nav hint ─────────────────────
 fn reader_footer(display: &mut Display, state: &UiState, now_ms: u32) {
     let dark = state.settings.dark_mode;
     let top  = H - FTR;
     fill(display, 0, top, W, 1, dim_color(dark));
-    let label = if now_ms < state.wpm_overlay_ms {
-        format!("WPM: {}", state.reader.wpm())
-    } else {
-        String::from("< wpm   |   tap=play/pause   |   wpm >")
+    let label = match state.reading_mode {
+        ReadingMode::Scroll => String::from("< word   |   scroll   |   word >"),
+        ReadingMode::Rsvp   => {
+            if now_ms < state.wpm_overlay_ms {
+                format!("WPM: {}", state.reader.wpm())
+            } else {
+                String::from("< wpm   |   tap=play/pause   |   wpm >")
+            }
+        }
     };
     Text::with_alignment(&label, Point::new(W / 2, top + FTR - 4),
         MonoTextStyle::new(&FONT_6X10, dim_color(dark)), Alignment::Center).draw(display).ok();
@@ -595,7 +693,37 @@ fn orp_index(word: &str) -> usize {
     let n = word.chars().count();
     if n == 0 { 0 } else { ((n.saturating_sub(1)) / 4).min(n - 1) }
 }
+/// Draw the vertical focus line in two segments: above and below the word area.
+/// The gap prevents the line from passing through the displayed word.
+fn draw_focus_line(
+    display: &mut Display,
+    color: Rgb565,
+    bar_top: i32,
+    bar_bot: i32,
+    center_y: i32,
+    font: FontSize,
+) {
+    let word_baseline = center_y + font.rsvp_y_offset();
+    let word_top      = word_baseline - font.font_height();
+    let word_bottom   = word_baseline;
+    let gap           = 4i32; // px clearance above and below the word
 
+    let cx = W / 2;
+
+    // Top segment: from just below the top bar to just above the word
+    let seg_top_start = bar_top + 2; // 2 = bar thickness
+    let seg_top_end   = word_top - gap;
+    if seg_top_end > seg_top_start {
+        fill(display, cx, seg_top_start, 1, seg_top_end - seg_top_start, color);
+    }
+
+    // Bottom segment: from just below the word to just above the bottom bar
+    let seg_bot_start = word_bottom + gap;
+    let seg_bot_end   = bar_bot; // bar_bot is the top edge of the bottom bar
+    if seg_bot_end > seg_bot_start {
+        fill(display, cx, seg_bot_start, 1, seg_bot_end - seg_bot_start, color);
+    }
+}
 // ── Fill helper ───────────────────────────────────────────────────────────────
 fn fill(display: &mut Display, x: i32, y: i32, w: i32, h: i32, color: Rgb565) {
     if w <= 0 || h <= 0 { return; }

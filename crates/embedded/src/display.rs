@@ -27,26 +27,7 @@ impl Display {
         self.flush();
     }
 
-    /// Cycle through 4 solid colors with delays so you can visually verify each.
-    /// Call once after init and watch the screen + serial log.
-    pub fn test_color_cycle(&mut self) {
-        let colors: &[(u16, &str)] = &[
-            (0xFFFF, "WHITE"),
-            (0xF800, "RED-ish (byte-swapped: depends on endian)"),
-            (0x07E0, "GREEN-ish"),
-            (0x001F, "BLUE-ish"),
-        ];
-        for &(colour, name) in colors {
-            log::info!(
-                "[display] test_color_cycle: filling screen with {} (0x{:04X})",
-                name,
-                colour
-            );
-            self.fill_solid(colour);
-            std::thread::sleep(std::time::Duration::from_millis(1500));
-        }
-        log::info!("[display] test_color_cycle complete");
-    }
+
 
     /// Send a command and optional parameter bytes using the correct QSPI protocol.
     /// The AXS15231B requires opcode AND address to be sent on all 4 data lines.

@@ -46,10 +46,13 @@ fn main() {
     let mut last_tp: Option<touch::TPoint> = None;
     let mut last_draw_ms: u32 = 0;
     let mut last_alive_ms: u32 = 0;
+    // issue #3: debounce — only register touch actions 350ms apart
+    let mut last_touch_action_ms: u32 = 0;
+    const TOUCH_DEBOUNCE_MS: u32 = 350;
 
-    // Button state (true = currently pressed/low)
+    // issue #2: power button hold tracking
+    let mut power_hold_start_ms: u32 = 0;
     let mut boot_was_pressed = false;
-    let mut power_was_pressed = false;
 
     log::info!("=== Entering main loop ===");
 
@@ -66,24 +69,42 @@ fn main() {
             }
             boot_was_pressed = boot_low;
 
+            // issue #2: POWER long-press → deep sleep
             let power_low = gpio_get_level(BTN_POWER) == 0;
-            if power_low && !power_was_pressed {
-                log::info!("[BTN] POWER button pressed (GPIO{})", BTN_POWER);
-            } else if !power_low && power_was_pressed {
-                log::info!("[BTN] POWER button released");
+            if power_low {
+                if power_hold_start_ms == 0 {
+                    power_hold_start_ms = now_ms;
+                    log::info!("[BTN] POWER pressed — hold 1.5 s to power off");
+                } else if now_ms.wrapping_sub(power_hold_start_ms) >= 1500 {
+                    log::info!("[POWER] Holding POWER 1.5 s — entering deep sleep");
+                    gpio_set_level(LCD_BL, 1);
+                    std::thread::sleep(std::time::Duration::from_millis(50));
+                    let ret = esp_sleep_enable_ext0_wakeup(BTN_POWER as gpio_num_t, 0);
+                    if ret != 0 {
+                        log::warn!("[POWER] ext0 wakeup config failed ({}), sleeping anyway", ret);
+                    }
+                    esp_deep_sleep_start();
+                }
+            } else {
+                if power_hold_start_ms != 0 {
+                    log::info!("[BTN] POWER released (short press — no action)");
+                }
+                power_hold_start_ms = 0;
             }
-            power_was_pressed = power_low;
         }
 
-        // ── Touch polling ─────────────────────────────────────────────────────
+        // ── Touch polling — issue #3: debounce ───────────────────────────────
         let tp = touch.read();
         if tp != last_tp {
             match tp {
-                Some(pt) => log::info!("[TOUCH] x={} y={}", pt.x, pt.y),
+                Some(pt) => {
+                    log::info!("[TOUCH] x={} y={}", pt.x, pt.y);
+                    if now_ms.wrapping_sub(last_touch_action_ms) >= TOUCH_DEBOUNCE_MS {
+                        state.handle_touch(tp, now_ms);
+                        last_touch_action_ms = now_ms;
+                    }
+                }
                 None => log::info!("[TOUCH] released"),
-            }
-            if tp.is_some() {
-                state.handle_touch(tp, now_ms);
             }
             last_tp = tp;
         }
@@ -103,11 +124,11 @@ fn main() {
         // ── Periodic alive log every 5 s ──────────────────────────────────────
         if now_ms.wrapping_sub(last_alive_ms) >= 5_000 {
             log::info!(
-                "[alive] t={}ms  wpm={}  playing={}  tp={:?}",
+                "[alive] t={}ms  wpm={}  playing={}  screen={:?}",
                 now_ms,
                 state.reader.wpm(),
                 state.playing,
-                last_tp
+                matches!(state.screen, ui::Screen::Reader)
             );
             last_alive_ms = now_ms;
         }
