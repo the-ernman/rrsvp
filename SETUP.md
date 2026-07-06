@@ -19,7 +19,7 @@ just run-desktop
 
 ## ESP32-S3 Development
 
-### 1 — Install the Xtensa Rust toolchain
+### 1 - Install the Xtensa Rust toolchain
 
 ```sh
 cargo +stable install espup --version 0.17.1
@@ -30,12 +30,12 @@ source ~/export-esp.sh
 Add `source ~/export-esp.sh` to your shell profile so it is available in every new terminal:
 
 ```sh
-echo 'source ~/export-esp.sh' >> ~/.zshrc   # or ~/.bashrc
+echo 'source ~/export-esp.sh' >> ~/.bashrc
 ```
 
 > **Toolchain requirement**: Xtensa Rust **1.88.0.0 or newer** is required. Older versions (1.85, 1.79) have MSRV conflicts with transitive dependencies.
 
-### 2 — Install flash and linker tools
+### 2 - Install flash and linker tools
 
 ```sh
 cargo +stable install espflash --version 4.4.0
@@ -52,7 +52,7 @@ just build-embedded
 
 The **first build** downloads ESP-IDF v5.3 (~600 MB) and compiles it. This takes 5–20 minutes. All subsequent builds are incremental.
 
-### 4 — Flash
+### 4 - Flash
 
 Connect the Waveshare ESP32-S3-Touch-LCD-3.49 via USB, then:
 
@@ -60,7 +60,7 @@ Connect the Waveshare ESP32-S3-Touch-LCD-3.49 via USB, then:
 just flash
 ```
 
-### 5 — Serial monitor (no reflash)
+### 5 - Serial monitor (no reflash)
 
 ```sh
 just monitor
