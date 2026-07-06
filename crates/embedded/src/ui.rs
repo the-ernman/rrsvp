@@ -286,7 +286,7 @@ impl UiState {
     fn touch_settings(&mut self, pt: crate::touch::TPoint) {
         let y = pt.y as i32;
         let x = pt.x as i32;
-        if y < 24 {
+        if y < 24 && x < (W / 3) {
             self.screen = Screen::MainMenu;
             return;
         }
@@ -1012,20 +1012,29 @@ fn reader_footer(display: &mut Display, state: &UiState, now_ms: u32) {
             .ok();
         }
         ReadingMode::Rsvp => {
-            // WPM label confined to left 3/4 of footer
-            let label = if now_ms < state.wpm_overlay_ms {
-                format!("WPM: {}", state.reader.wpm())
-            } else {
-                String::from("< wpm   |   wpm >")
-            };
+            // Draw WPM- button (left half: x=0..W/2)
+            fill(display, 0, top + 1, W / 2, FTR - 1, panel_bg(dark));
+            // Draw WPM+ button (next quarter: x=W/2..3*W/4)
+            fill(display, W / 2, top + 1, W / 4, FTR - 1, panel_bg(dark));
+
+            // Draw labels on each button
             Text::with_alignment(
-                &label,
-                Point::new(btn_x / 2, top + FTR - 4),
-                MonoTextStyle::new(&FONT_6X10, dim_color(dark)),
+                "WPM -",
+                Point::new(W / 4, top + FTR - 4),
+                MonoTextStyle::new(&FONT_6X10, fg_color(dark)),
                 Alignment::Center,
             )
             .draw(display)
             .ok();
+            Text::with_alignment(
+                "WPM +",
+                Point::new(W / 2 + W / 8, top + FTR - 4),
+                MonoTextStyle::new(&FONT_6X10, fg_color(dark)),
+                Alignment::Center,
+            )
+            .draw(display)
+            .ok();
+            // Play/pause button (unchanged)
             let btn_bg = if state.playing {
                 fg_color(dark)
             } else {

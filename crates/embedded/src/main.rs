@@ -259,6 +259,9 @@ fn main() {
 
         if state.playing {
             state.reader.update(now_ms, true);
+            if state.reader.at_end() {
+                state.playing = false;
+            }
         }
 
         if now_ms.wrapping_sub(last_draw_ms) >= 16 {
