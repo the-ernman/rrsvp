@@ -5,13 +5,13 @@ use embedded_graphics::{pixelcolor::Rgb565, prelude::*};
 
 use crate::board::*;
 
-/// Pixels per DMA chunk (matching C++ txChunkBytes = 16 KB).
-const TX_CHUNK_PIXELS: usize = (16 * 1024) / 2; // 8192 pixels
+/// Pixels per DMA chunk
+const TX_CHUNK_PIXELS: usize = (16 * 1024) / 2;
 
 pub struct Display {
     spi: spi_device_handle_t,
-    pub fb: Vec<u16>, // RGB565 framebuffer, LCD_W * LCD_H pixels
-    tx_buf: Vec<u16>, // scratch buffer for one DMA chunk
+    pub fb: Vec<u16>,
+    tx_buf: Vec<u16>,
 }
 
 impl Display {
@@ -26,8 +26,6 @@ impl Display {
         }
         self.flush();
     }
-
-
 
     /// Send a command and optional parameter bytes using the correct QSPI protocol.
     /// The AXS15231B requires opcode AND address to be sent on all 4 data lines.
@@ -48,17 +46,17 @@ impl Display {
     unsafe fn init_hardware() -> Self {
         log::info!("[display] init start");
 
-        // --- Backlight off during init (active-low: HIGH = off) ---
+        // Backlight off during init (active-low: HIGH = off)
         gpio_reset_pin(LCD_BL);
         gpio_set_direction(LCD_BL, gpio_mode_t_GPIO_MODE_OUTPUT);
         gpio_set_level(LCD_BL, 1);
 
-        // --- RST pin ---
+        // RST pin
         gpio_reset_pin(LCD_RST);
         gpio_set_direction(LCD_RST, gpio_mode_t_GPIO_MODE_OUTPUT);
         gpio_set_pull_mode(LCD_RST, gpio_pull_mode_t_GPIO_PULLUP_ONLY);
 
-        // --- QSPI bus ---
+        // QSPI bus
         let bus_cfg = spi_bus_config_t {
             __bindgen_anon_1: spi_bus_config_t__bindgen_ty_1 {
                 data0_io_num: LCD_D0,
@@ -77,7 +75,7 @@ impl Display {
             data5_io_num: -1,
             data6_io_num: -1,
             data7_io_num: -1,
-            // Match C++: max_transfer_sz = txChunkBytes + 8
+
             max_transfer_sz: (TX_CHUNK_PIXELS * 2 + 8) as i32,
             flags: SPICOMMON_BUSFLAG_MASTER | SPICOMMON_BUSFLAG_GPIO_PINS,
             intr_flags: 0,
@@ -91,11 +89,11 @@ impl Display {
         log::info!("[display] spi_bus_initialize ret={}", ret);
         assert_eq!(ret, ESP_OK as i32, "spi_bus_initialize failed");
 
-        // --- SPI device (matches C++ deviceConfig exactly) ---
+        // SPI device (matches C++ deviceConfig exactly)
         let mut dev_cfg: spi_device_interface_config_t = core::mem::zeroed();
         dev_cfg.command_bits = 8;
         dev_cfg.address_bits = 24;
-        dev_cfg.mode = 3; // SPI_MODE3 (CPOL=1, CPHA=1)
+        dev_cfg.mode = 3;
         dev_cfg.clock_speed_hz = 40_000_000;
         dev_cfg.spics_io_num = LCD_CS;
         dev_cfg.flags = SPI_DEVICE_HALFDUPLEX as u32;
@@ -106,7 +104,7 @@ impl Display {
         log::info!("[display] spi_bus_add_device ret={}", ret);
         assert_eq!(ret, ESP_OK as i32, "spi_bus_add_device failed");
 
-        // --- Hardware reset sequence ---
+        // Hardware reset sequence
         gpio_set_level(LCD_RST, 1);
         std::thread::sleep(std::time::Duration::from_millis(30));
         gpio_set_level(LCD_RST, 0);
@@ -115,7 +113,7 @@ impl Display {
         std::thread::sleep(std::time::Duration::from_millis(30));
         log::info!("[display] hardware reset complete");
 
-        // --- Panel init sequence (kQspiInit from axs15231b.cpp, with hardware landscape MADCTL) ---
+        // Panel init sequence (kQspiInit from axs15231b.cpp, with hardware landscape MADCTL)
         Self::send_command(spi, 0x11, &[]); // Sleep Out
         std::thread::sleep(std::time::Duration::from_millis(100));
         Self::send_command(spi, 0x36, &[0x00]); // MADCTL = 0x00 (portrait, no hardware rotation — matches C++)
@@ -126,7 +124,7 @@ impl Display {
         std::thread::sleep(std::time::Duration::from_millis(100));
         log::info!("[display] panel init sequence complete");
 
-        // --- Enable TCA9554 backlight power via system I2C (SDA=47, SCL=48) ---
+        // Enable TCA9554 backlight power via system I2C (SDA=47, SCL=48)
         // The Waveshare board uses a TCA9554 GPIO expander to gate the backlight boost converter.
         // Pin 1 = backlight enable, Pin 6 = system enable. Both must be HIGH (output) to power the backlight.
         {
@@ -174,7 +172,7 @@ impl Display {
             }
         }
 
-        // --- Backlight on (active-low: LOW = full brightness) ---
+        // Backlight on (active-low: LOW = full brightness)
         gpio_set_level(LCD_BL, 0);
         log::info!("[display] backlight ON (GPIO{}=LOW)", LCD_BL);
 
@@ -210,7 +208,7 @@ impl Display {
                 let rows_this_block = ROWS_PER_DMA.min(NATIVE_H - row_block_start);
                 let pixels_this_block = rows_this_block * NATIVE_W;
 
-                // --- transpose needed pixels into tx_buf ---
+                // transpose needed pixels into tx_buf
                 self.tx_buf.clear();
                 for native_y in row_block_start..(row_block_start + rows_this_block) {
                     for native_x in 0..NATIVE_W {
@@ -221,7 +219,7 @@ impl Display {
                     }
                 }
 
-                // --- send this block over QSPI ---
+                // send this block over QSPI
                 let is_first_block = row_block_start == 0;
                 let mut offset = 0usize;
                 let mut first_chunk = true;

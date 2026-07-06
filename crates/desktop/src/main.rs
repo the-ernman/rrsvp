@@ -52,7 +52,6 @@ impl eframe::App for RsvpApp {
             .show(ctx, |ui| {
                 let available = ui.available_rect_before_wrap();
 
-                // ── Header ────────────────────────────────────────────────────
                 let pct = if self.reader.word_count() > 0 {
                     (self.reader.current_index() * 100) / self.reader.word_count()
                 } else {
@@ -64,7 +63,10 @@ impl eframe::App for RsvpApp {
                         format!("{:>3}%  {} WPM", pct, self.reader.wpm()),
                     );
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.small_button(if self.playing { "⏸" } else { "▶" }).clicked() {
+                        if ui
+                            .small_button(if self.playing { "⏸" } else { "▶" })
+                            .clicked()
+                        {
                             self.playing = !self.playing;
                             if self.playing {
                                 self.reader.start(now_ms);
@@ -75,7 +77,6 @@ impl eframe::App for RsvpApp {
 
                 ui.separator();
 
-                // ── Word display ──────────────────────────────────────────────
                 let word = self.reader.current_word().to_string();
                 let center_y = available.height() / 2.0 + 10.0;
 
@@ -89,7 +90,6 @@ impl eframe::App for RsvpApp {
                             egui::Layout::centered_and_justified(egui::Direction::LeftToRight),
                             |ui| {
                                 if !word.is_empty() {
-                                    // Highlight the ORP character in red.
                                     let orp = orp_index(&word);
                                     let mut job = egui::text::LayoutJob::default();
                                     for (i, ch) in word.chars().enumerate() {
@@ -117,7 +117,6 @@ impl eframe::App for RsvpApp {
 
                 ui.separator();
 
-                // ── Footer ────────────────────────────────────────────────────
                 ui.horizontal(|ui| {
                     if ui.small_button("−WPM").clicked() {
                         self.reader.adjust_wpm(-1);
@@ -142,16 +141,16 @@ impl eframe::App for RsvpApp {
                 });
             });
 
-        // Request repaint at ~60fps when playing.
         if self.playing {
             ctx.request_repaint_after(std::time::Duration::from_millis(16));
         }
     }
 }
 
-/// ORP: index of the "optimal recognition point" character.
 fn orp_index(word: &str) -> usize {
     let len = word.chars().count();
-    if len == 0 { return 0; }
+    if len == 0 {
+        return 0;
+    }
     ((len.saturating_sub(1)) / 4).min(len - 1)
 }

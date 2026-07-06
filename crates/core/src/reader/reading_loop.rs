@@ -1,7 +1,5 @@
 use crate::text::latin;
 
-// ── pacing constants (matching C++ exactly) ──────────────────────────────────
-
 const MIN_WPM: u16 = 10;
 const LOW_WPM_MAX: u16 = 100;
 const LOW_WPM_STEP: u16 = 10;
@@ -34,7 +32,6 @@ const STRONG_SENTENCE_PAUSE_PERCENT: u16 = 150;
 const MAX_CATCH_UP_WORDS: u8 = 4;
 const MAX_PACING_DELAY_MS: u16 = 600;
 
-/// Pacing tunables (matching C++ PacingConfig).
 #[derive(Debug, Clone)]
 pub struct PacingConfig {
     pub long_word_delay_ms: u16,
@@ -57,8 +54,6 @@ impl Default for PacingConfig {
         }
     }
 }
-
-// ── word classifier helpers ───────────────────────────────────────────────────
 
 fn is_letter(c: u8) -> bool {
     latin::is_letter(c)
@@ -271,8 +266,6 @@ fn looks_like_abbreviation(word: &str, next_starts_lowercase: bool) -> bool {
     false
 }
 
-// ── pacing calculation ────────────────────────────────────────────────────────
-
 fn clamp_pacing_delay(delay_ms: u16) -> u16 {
     delay_ms.min(MAX_PACING_DELAY_MS)
 }
@@ -419,8 +412,6 @@ fn word_ends_sentence(word: &str, next_starts_lowercase: bool) -> bool {
     }
 }
 
-// ── demo words ────────────────────────────────────────────────────────────────
-
 const DEMO_WORDS: &[&str] = &[
     "This",
     "is",
@@ -561,9 +552,6 @@ const DEMO_WORDS: &[&str] = &[
     "you.",
 ];
 
-// ── ReadingLoop ───────────────────────────────────────────────────────────────
-
-/// RSVP timing engine. Port of C++ ReadingLoop.
 pub struct ReadingLoop {
     current_index: usize,
     last_advance_ms: u32,
@@ -631,7 +619,6 @@ impl ReadingLoop {
         self.set_current_word_from_index();
     }
 
-    /// Advance time — returns true if the current word changed.
     pub fn update(&mut self, now_ms: u32, allow_catch_up: bool) -> bool {
         let mut changed = false;
         let max_catch_up = if allow_catch_up {
@@ -819,8 +806,6 @@ impl ReadingLoop {
         let count = self.word_count();
         count == 0 || self.current_index + 1 >= count
     }
-
-    // ── private helpers ───────────────────────────────────────────────────────
 
     fn using_loaded_book(&self) -> bool {
         self.word_source.is_some() || !self.loaded_words.is_empty()

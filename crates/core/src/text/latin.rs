@@ -283,7 +283,7 @@ pub fn is_lowercase_letter(value: u8) -> bool {
     (value >= b'a' && value <= b'z')
         || value == 0xDF
         || (value >= 0xE0 && value <= 0xF6)
-        || (value >= 0xF8 && value <= 0xFF)
+        || (value >= 0xF8)
         || is_custom_lowercase_letter(value)
 }
 
