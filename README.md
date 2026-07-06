@@ -1,6 +1,6 @@
 # RRSVP Rapid Serial Visual Presentation Reader
 
-> A Rust rewrite of the beloved [RSVP Nano](https://github.com/ionutdecebal/rsvpnano) C++ project — faster, safer, and built for the long haul.
+> A Rust rewrite of the beloved [RSVP Nano](https://github.com/ionutdecebal/rsvpnano) project.
 
 [![Rust](https://img.shields.io/badge/language-Rust-orange?logo=rust)](https://www.rust-lang.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -275,6 +275,6 @@ New features, bug fixes, hardware ports, and documentation improvements are all 
 
 ## License
 
-MIT — see [LICENSE](LICENSE) for details.
+[MIT](LICENSE)
 
 Original C++ project ([RSVP Nano](https://github.com/ionutdecebal/rsvpnano)) is also MIT licensed. Copyright © 2026 RSVP Nano contributors.
