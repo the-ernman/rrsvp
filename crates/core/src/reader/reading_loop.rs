@@ -823,7 +823,11 @@ impl ReadingLoop {
             }
             n
         } else {
-            (self.current_index + steps) % count
+            let n = self.current_index + steps;
+            if n >= count {
+                return false;
+            }
+            n
         };
         self.current_index = next;
         self.set_current_word_from_index();
