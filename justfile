@@ -1,11 +1,7 @@
-# RRSVP — project task runner
 # Install: cargo +stable install just
 
-# List all available commands
 default:
     @just --list
-
-# ── Desktop ──────────────────────────────────────────────────────────────────
 
 # Build the desktop application (debug)
 build-desktop:
@@ -18,10 +14,6 @@ build-desktop-release:
 # Run the desktop application
 run-desktop:
     cargo run -p rrsvp-desktop
-
-# ── Embedded (ESP32-S3) ───────────────────────────────────────────────────────
-# Requires espup + espflash + ldproxy installed via SETUP.md.
-# Environment is sourced automatically inside each recipe.
 
 # Build embedded firmware (release)
 build-embedded:
@@ -53,8 +45,6 @@ flash:
 # Open serial monitor on the connected device (without flashing)
 monitor:
     espflash monitor
-
-# ── Quality ───────────────────────────────────────────────────────────────────
 
 # Check core + desktop compile without errors (no ESP toolchain required)
 check:
